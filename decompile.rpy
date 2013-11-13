@@ -1271,9 +1271,8 @@ init -9001 python:
             else:
                 result = "init:"
             __LB_add_string(item.filename,item.linenumber,result,tabs)
-            if  len(item.block)>1 or not isinstance(item.block[0],renpy.ast.Python) or item.block[0].linenumber != item.linenumber:
-                for it in item.block:
-                    __LB_decompile_item(it,tabs+1)
+            for it in item.block:
+                __LB_decompile_item(it,tabs+1)
 
 
 #http://www.renpy.org/wiki/renpy/doc/reference/The_Ren'Py_Language#Jump_Statement
