@@ -138,7 +138,8 @@ init -9001 python:
     import re
     __LB_invisible_space = ""
     __LB_files_filtered_out = [re.compile(".*common.00[a-z_]*.rpy.*"),re.compile(".*common._[a-z_/]*.rpym.*"),re.compile(".*decompile.rpy.*"),re.compile(".*injection.rpy.*")]
-    __LB_decompiled_files = {}
+    from collections import defaultdict
+    __LB_decompiled_files = defaultdict(list)
 
     def __LB_make_tab(tabs):
         return "    "*tabs
@@ -1163,95 +1164,8 @@ init -9001 python:
     
     def __LB_add_string(file,line,str,tabs):
         global __LB_decompiled_files
-        if  not file in __LB_decompiled_files:
-            __LB_decompiled_files[file] = {}
-        if  not line in __LB_decompiled_files[file]:
-            __LB_decompiled_files[file][line] = (tabs,str)
-        else:
-            (t,s) = __LB_decompiled_files[file][line]
-            if  not s.startswith(str) and not str.startswith(s):
-                if  s.startswith("call ") and str.startswith("label "):
-                    if  not " from " in s:
-                        s += " from "+str[5:-1]
-                        __LB_decompiled_files[file][line] = (t,s)
-                elif  str.startswith("call ") and s.startswith("label "):
-                    if  not " from " in str:
-                        str += " from "+s[5:-1]
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  s.startswith("init") and str.startswith("python"):
-                    s = s[:-1] + " " + str
-                    __LB_decompiled_files[file][line] = (t,s)
-                elif  str.startswith("init") and s.startswith("python"):
-                    str = str[:-1] + " " + s
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("init") and s.startswith("define"):
-                    pass
-                elif  s.startswith("init") and str.startswith("define"):
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("init") and s.startswith("image"):
-                    pass
-                elif  s.startswith("init") and str.startswith("image"):
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("init") and s.startswith("transform"):
-                    pass
-                elif  s.startswith("init") and str.startswith("transform"):
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("init") and s.startswith("#TODO"):
-                    pass
-                elif  s.startswith("init") and str.startswith("#TODO"):
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("pass") and s.startswith("call"):
-                    pass
-                elif  s.startswith("pass") and str.startswith("call"):
-                    __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("menu") and s.startswith("label "):
-                    suffix = ""
-                    if  str.find("\n") != -1:
-                        suffix = str[str.find("\n"):]
-                    __LB_decompiled_files[file][line] = (tabs,"menu "+s[6:]+suffix)
-                elif  s.startswith("menu") and str.startswith("label "):
-                    suffix = ""
-                    if  s.find("\n") != -1:
-                        suffix = s[s.find("\n"):]
-                    __LB_decompiled_files[file][line] = (t,"menu "+str[6:]+suffix)
-                elif  s.startswith("menu") and str.startswith("menu"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  str.startswith("menu") and not s.startswith("menu"):
-                    __LB_decompiled_files[file][line] = (tabs,str + "\n" + __LB_make_tab(tabs+1) + s)
-                elif  s.startswith("menu") and not str.startswith("menu"):
-                    __LB_decompiled_files[file][line] = (t,s + "\n" + __LB_make_tab(t+1) + str)
-                elif  s.startswith("python") and str.startswith("python"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  s.startswith("transform") and str.startswith("transform"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  s.startswith("image") and str.startswith("image"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  s.startswith("show") and str.startswith("show"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  s.startswith("scene") and str.startswith("scene"):
-                    if  len(str) > len(s):
-                        __LB_decompiled_files[file][line] = (tabs,str)
-                elif  "with " in str:
-                    if  "with " in s:
-                        pass
-                    else:
-                        __LB_decompiled_files[file][line] = (tabs,s+" "+str)
-                elif  "with " in s:
-                    if  "with " in str:
-                        pass
-                    elif ":\n" in str:
-                        __LB_decompiled_files[file][line] = (tabs,str.replace(":\n"," "+s+":\n",1))
-                    else:
-                        __LB_decompiled_files[file][line] = (tabs,str+" "+s)
-                else:
-                    __LB_decompiled_files[file][line] = (tabs,"#TODO: collision: " + str + " " + s)
-            if  t < tabs:
-                __LB_decompiled_files[file][line] = (tabs,str)
+        __LB_decompiled_files[file].append((tabs, str))
+
 
 
 
@@ -1587,13 +1501,7 @@ init -9001 python:
             if  len([1 for matcher in __LB_files_filtered_out if matcher.match(fname_print)]) > 0:
                 continue
             out = open(fname_print,"wb")
-            lines = [i for i in __LB_decompiled_files[fname]]
-            lines.sort()
-            for i in range(1,lines[-1]+1):
-                if  not i in __LB_decompiled_files[fname]:
-                    out.write("\n")
-                elif  __LB_decompiled_files[fname][i] != None:
-                    (tabs,str) = __LB_decompiled_files[fname][i]
+            for tabs, str in __LB_decompiled_files[fname]:
                     if  str[-1:] == "\n":
                         str = str[:-1]
                     if  str.startswith("python:") and len(str.split("\n")) == 2:
@@ -1605,11 +1513,6 @@ init -9001 python:
                         out.write(__LB_make_tab(tabs) + str + "\n")
                     except:
                         renpy.error((fname_print,i,__LB_make_tab(tabs) + str + "\n"))
-                    for j in range(1,len(str.split("\n"))):
-                        if  i+j in __LB_decompiled_files[fname]:
-                            break
-                        __LB_decompiled_files[fname][i+j] = None
-                    i += 1
             out.close()
 
     __LB_decompile_all()
