@@ -1571,8 +1571,17 @@ init -9001 python:
         return result
 
     def __LB_decompile_all():
-        for key,val in renpy.game.script.namemap.iteritems():
+        def filter_out_children(statements):
+            children = set()
+            for statement in statements:
+                children.update(statement.get_children())
+            for statement in statements:
+                if statement not in children:
+                    yield statement
+
+        for val in filter_out_children(renpy.game.script.all_stmts):
             __LB_decompile_item(val)
+
         for fname in __LB_decompiled_files:
             fname_print = fname.replace("/","_").replace("\\","_").replace(":","_")+".txt"
             if  len([1 for matcher in __LB_files_filtered_out if matcher.match(fname_print)]) > 0:
